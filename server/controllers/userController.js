@@ -5,6 +5,7 @@ import bcrypt from "bcryptjs";
 
 // Signup a new user
 export const signup = async(req, res)=>{
+    console.log("Signup route hit");
     const{ fullName, email, password, bio } = req.body;
     try{
         if(!fullName || !email || !password || !bio){
@@ -36,7 +37,7 @@ export const login = async(req,res) =>{
         const { email, password } = req.body;
         const userData = await User.findOne({email})
 
-        const isPasswordCorrect = await bcrypt.comapare(password, userData.password )
+        const isPasswordCorrect = await bcrypt.compare(password, userData.password )
 
         if(!isPasswordCorrect){
             return res.json({ success: false, message: "Invalid Credentials"});
@@ -63,7 +64,7 @@ export const updateProfile =async (req,res)=>{
         const { profilePic, bio, fullName } = req.body;
 
         const userId = req.user._id;
-        let updateUser;
+        let updatedUser;
 
         if(!profilePic){
             updatedUser = await User.findByIdAndUpdate(userId, {bio, fullName}, {new: true});
