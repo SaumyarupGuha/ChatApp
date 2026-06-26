@@ -31,7 +31,7 @@ export const getUsersForSidebar = async(req, res)=>{
 // Get all messages for selected user
 export const getMessages = async(req, res) => {
     try{
-        const{ id: selectedUserId } = req.params;
+        const{ id: selectedUserId } = req.params;  // Renaming id to selectedUserId for clarity
         const myId = req.user._id;
 
         const messages = await Message.find({
@@ -55,7 +55,19 @@ export const getMessages = async(req, res) => {
 export const markMessageAsSeen = async(req,res)=>{
     try{
         const { id } = req.params;
-        await Message.findByIdAndUpdate(id, {seen: true})
+        const userId = req.user._id;
+
+        const message = await Message.findById(id);
+
+        if(!message){
+            return res.json({success: false, message: "Message not found"});
+        }
+
+        if(message.receiverId.toString() !== userId.toString()){
+            return res.json({success: false, message: "Unauthorized"});
+        }
+
+        await Message.findByIdAndUpdate(id, {seen: true});
         res.json({success: true})
     }
     catch(error){

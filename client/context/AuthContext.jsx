@@ -34,7 +34,7 @@ export const AuthProvider = ({ children })=>{
     //Login function to handle user authentication and socket connection
     const login = async(state, credentials)=>{
         try{
-            const { data } = await axios.post(`/api/auth/${state}`, credentials)
+            const { data } = await axios.post(`/api/auth/${state}`, credentials)  // "credentials" becomes req.body
             if(data.success){
                 setAuthUser(data.userData);
                 connectSocket(data.userData);
@@ -53,8 +53,8 @@ export const AuthProvider = ({ children })=>{
     // Logout function to handle user logout and socket disconnection
     const logout = async()=>{
         localStorage.removeItem("token");
-         setToken("null");
-         setAuthUser("null");
+         setToken(null);
+         setAuthUser(null);
          setOnlineUsers([]);
          axios.defaults.headers.common["token"] = null;
          toast.success("Logged out successfully");

@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState } from "react";
+import toast from "react-hot-toast";
 import { AuthContext } from "./AuthContext";
 
 export const ChatContext = createContext();
@@ -10,7 +11,7 @@ export const ChatProvider = ({ children })=>{
     const [selectedUser, setSelectedUser] = useState(null)
     const [unseenMessages, setUnseenMessages] = useState({})
 
-    const {socket, axios } = useContext(AuthContext);
+    const {socket, axios, authUser } = useContext(AuthContext);
 
     const getUsers = async ()=>{
         try{
@@ -27,11 +28,10 @@ export const ChatProvider = ({ children })=>{
     //function to get messages for selected user
     const getMessages = async (userId)=>{
         try{
-            const { data } = await axios.get(`/api/message/${userId}`);
+            const { data } = await axios.get(`/api/messages/${userId}`);
             if(data.success){
                 setMessages(data.messages);
 
-                axios.put(`/api/messages/mark-all/${userId}`);
 
                 setUnseenMessages((prev) => {
                 const updated = { ...prev };
@@ -66,7 +66,9 @@ export const ChatProvider = ({ children })=>{
             if(selectedUser && newMessage.senderId === selectedUser._id){
                 newMessage.seen = true;
                 setMessages((prevMessages)=> [...prevMessages, newMessage]);
-                axios.put(`/api/messages/mark/${newMessage._id}`);
+                if(newMessage.receiverId === authUser._id){
+                    axios.put(`/api/messages/mark/${newMessage._id}`);
+                }
             } else{
                 setUnseenMessages((prevUnseenMessages)=>({
                     ...prevUnseenMessages, [newMessage.senderId] : prevUnseenMessages[newMessage.senderId] ? prevUnseenMessages[newMessage.senderId] + 1 : 1
