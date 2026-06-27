@@ -10,13 +10,14 @@ const ProfilePage = () => {
   const [selectedImg, setSelectedImg] = useState(null)
   const navigate = useNavigate();
   const [name, setName] = useState(authUser.fullName)
-  const[bio, setBio] = useState(authUser.bio)
+  const [username, setUsername] = useState(authUser.username || "")
+  const [bio, setBio] = useState(authUser.bio)
 
   const handleSubmit = async (e)=>{
     e.preventDefault();
 
       if(!selectedImg){
-        await updateProfile({fullName: name, bio})
+        await updateProfile({fullName: name, username, bio})
         navigate('/');
         return;
       }
@@ -24,7 +25,7 @@ const ProfilePage = () => {
       reader.readAsDataURL(selectedImg);
       reader.onload = async ()=>{
         const base64Image = reader.result;
-        await updateProfile({profilePic: base64Image, fullName: name, bio})
+        await updateProfile({profilePic: base64Image, fullName: name, username, bio})
         navigate('/');
       }
     
@@ -47,8 +48,14 @@ const ProfilePage = () => {
               'rounded-full'}`}/>
               Upload Profile Image
           </label>
+
           <input onChange={(e)=>setName(e.target.value)} value={name}
            type="text" required placeholder='Your name' className='p-2 border
+            border-gray-500 rounded-md focus:outline-none focus:ring-2
+             focus:ring-violet-500' />
+
+          <input onChange={(e)=>setUsername(e.target.value.toLowerCase())} value={username}
+           type="text" required placeholder='Username (e.g. john_doe)' className='p-2 border
             border-gray-500 rounded-md focus:outline-none focus:ring-2
              focus:ring-violet-500' />
           

@@ -5,21 +5,24 @@ import bcrypt from "bcryptjs";
 
 // Signup a new user
 export const signup = async(req, res)=>{
-    console.log("Signup route hit");
-    const{ fullName, email, password, bio } = req.body;
+    const{ fullName, username, email, password, bio } = req.body;
     try{
-        if(!fullName || !email || !password || !bio){
+        if(!fullName || !username || !email || !password || !bio){
             return res.json({success: false, message: "Missing Details"})
         }
-        const user = await User.findOne({email});
-        if(user){
+        const emailExists = await User.findOne({email});
+        if(emailExists){
             return res.json({success: false, message:"Account already exists"})
+        }
+        const usernameExists = await User.findOne({username});
+        if(usernameExists){
+            return res.json({success: false, message:"Username already taken"})
         }
         const salt = await bcrypt.genSalt(10);
         const hashedPassword = await bcrypt.hash(password, salt);
 
         const newUser = await User.create({
-            fullName, email, password: hashedPassword, bio
+            fullName, username, email, password: hashedPassword, bio
         });
         const token = generateToken(newUser._id)
 
@@ -35,16 +38,18 @@ export const signup = async(req, res)=>{
 export const login = async(req,res) =>{
     try{
         const { email, password } = req.body;
-        const userData = await User.findOne({email})
+
         if (!email || !password) {
             return res.json({ success: false, message: "Missing Details" })
         }
+
+        const userData = await User.findOne({email})
 
         if (!userData) {
             return res.json({ success: false, message: "Invalid Credentials" });
         }
 
-        const isPasswordCorrect = await bcrypt.compare(password, userData.password )
+        const isPasswordCorrect = await bcrypt.compare(password, userData.password)
 
         if(!isPasswordCorrect){
             return res.json({ success: false, message: "Invalid Credentials"});
@@ -60,32 +65,59 @@ export const login = async(req,res) =>{
     }
 }
 
-//Controller to check if the user is authenticated
+// Controller to check if the user is authenticated
 export const checkAuth = (req,res) =>{
     res.json({ success: true, user: req.user});
 }
 
-//Controller to update user Profile
-export const updateProfile =async (req,res)=>{
+// Controller to update user profile
+export const updateProfile = async (req,res)=>{
     try{
-        const { profilePic, bio, fullName } = req.body;
-
+        const { profilePic, bio, fullName, username } = req.body;
         const userId = req.user._id;
-        let updatedUser;
 
+        if(username){
+            const usernameExists = await User.findOne({username, _id: {$ne: userId}});
+            if(usernameExists){
+                return res.json({success: false, message: "Username already taken"});
+            }
+        }
+
+        let updatedUser;
         if(!profilePic){
-            updatedUser = await User.findByIdAndUpdate(userId, {bio, fullName}, {new: true});
+            updatedUser = await User.findByIdAndUpdate(userId, {bio, fullName, username}, {new: true});
         }
         else{
             const upload = await cloudinary.uploader.upload(profilePic);
-
-            updatedUser = await User.findByIdAndUpdate(userId, {profilePic: upload.secure_url, bio, fullName},{new:true});
+            updatedUser = await User.findByIdAndUpdate(userId, {profilePic: upload.secure_url, bio, fullName, username},{new:true});
         }
         res.json({success: true, user: updatedUser})
     }
     catch(error){
         console.log(error.message);
-
         res.json({success: false, message: error.message})
+    }
+}
+
+// Search users by username or email
+export const searchUser = async(req, res)=>{
+    try{
+        const { query } = req.query;
+        if(!query){
+            return res.json({success: false, message: "Search query required"});
+        }
+        const users = await User.find({
+            $or: [
+                {username: {$regex: query, $options: "i"}},
+                {email: {$regex: query, $options: "i"}}
+            ],
+            _id: {$ne: req.user._id}
+        }).select("-password");
+
+        res.json({success: true, users});
+    }
+    catch(error){
+        console.log(error.message);
+        res.json({success: false, message: error.message});
     }
 }
