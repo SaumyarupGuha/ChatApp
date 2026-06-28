@@ -6,6 +6,8 @@ import { connectDB } from "./lib/db.js";
 import userRouter from "./routes/userRoutes.js";
 import messageRouter from "./routes/messageRoutes.js";
 import { Server } from "socket.io";
+import aiRouter from "./routes/aiRoutes.js";
+import { sendScheduledMessages } from "./controllers/messageController.js";
 
 // Create Express app and HTTP server
 // app.use(cors({
@@ -54,12 +56,16 @@ io.on("connection", (socket)=>{
 app.use(express.json({limit: "4mb"}));
 app.use(cors());
 
+// Send scheduled messages every 10 seconds
+setInterval(() => {
+    sendScheduledMessages();
+}, 10000);
 
 //Routes Setup
 app.use("/api/status", (req,res)=> res.send("Server is live"));
 app.use("/api/auth",userRouter);
 app.use("/api/messages", messageRouter)
-
+app.use("/api/ai", aiRouter);
 //connect top MongoDB
 await connectDB();
 

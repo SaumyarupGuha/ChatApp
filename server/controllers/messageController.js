@@ -70,16 +70,28 @@ export const getMessages = async(req, res) => {
     try{
         const{ id: selectedUserId } = req.params;
         const myId = req.user._id;
+        const now = new Date();
 
         const messages = await Message.find({
             $or: [
                 {senderId: myId, receiverId: selectedUserId},
                 {senderId: selectedUserId, receiverId: myId},
             ]
-        })
+        }).sort("createdAt");
+        
+        // Filter out scheduled messages that haven't been sent yet
+        // This prevents User B from seeing scheduled messages before the scheduled time
+        const filteredMessages = messages.filter(msg => {
+            if (msg.isScheduled && !msg.sent) {
+                // Don't show unsent scheduled messages to receiver
+                return msg.senderId.toString() === myId.toString();
+            }
+            return true;
+        });
+        
         await Message.updateMany({ senderId: selectedUserId, receiverId: myId}, {seen:true});
 
-        res.json({success: true, messages})
+        res.json({success: true, messages: filteredMessages})
     }
     catch(error){
         console.log(error.message);
@@ -158,6 +170,108 @@ export const sendMessage = async (req, res) =>{
     catch(error){
         console.log(error.message);
         res.json({success: false, message: error.message})
+    }
+}
+
+// Schedule a message
+export const scheduleMessage = async (req, res) =>{
+    try{
+        const {text, image, scheduledAt} = req.body;
+        const receiverId = req.params.id;
+        const senderId = req.user._id;
+
+        const receiver = await User.findById(receiverId).select("blockedUsers");
+        if(receiver.blockedUsers.map(id => id.toString()).includes(senderId.toString())){
+            return res.json({success: false, message: "Cannot send message"});
+        }
+
+        const previousMessage = await Message.findOne({
+            $or: [
+                {senderId, receiverId},
+                {senderId: receiverId, receiverId: senderId}
+            ]
+        });
+        const isFirstMessage = !previousMessage;
+
+        let imageUrl;
+        if(image){
+            const uploadResponse = await cloudinary.uploader.upload(image)
+            imageUrl = uploadResponse.secure_url;
+        }
+
+        const scheduledMsg = await Message.create({
+            senderId,
+            receiverId,
+            text,
+            image: imageUrl,
+            scheduledAt,
+            isScheduled: true,
+            sent: false,
+            isRequest: isFirstMessage
+        })
+
+        res.json({success: true, scheduledMsg})
+    }
+    catch(error){
+        console.log(error.message);
+        res.json({success: false, message: error.message})
+    }
+}
+
+// Send scheduled messages that are due
+export const sendScheduledMessages = async () =>{
+    try{
+        const now = new Date();
+        
+        // Find all messages that are scheduled, not yet sent, and due
+        const dueScheduledMessages = await Message.find({
+            isScheduled: true,
+            sent: false,
+            scheduledAt: {$lte: now}
+        })
+        
+        console.log(`Found ${dueScheduledMessages.length} scheduled messages to send`);
+        
+        for (const msg of dueScheduledMessages) {
+            // Update sent status
+            await Message.findByIdAndUpdate(msg._id, { sent: true, isScheduled: false });
+            
+            // Set createdAt to scheduledAt time (so message shows with scheduled time)
+            await Message.findByIdAndUpdate(msg._id, { 
+                $set: { createdAt: msg.scheduledAt, updatedAt: msg.scheduledAt }
+            });
+            
+            // Fetch updated message with new timestamp
+            const updatedMsg = await Message.findById(msg._id);
+            
+            // Emit to receiver via socket
+            const receiverSocketId = userSocketMap[msg.receiverId];
+            if(receiverSocketId) {
+                io.to(receiverSocketId).emit("newMessage", updatedMsg);
+            }
+        }
+    }
+    catch(error){
+        console.log("Error sending scheduled messages:", error.message);
+    }
+}
+
+// Get scheduled messages for a user
+export const getScheduledMessages = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        
+        const scheduledMessages = await Message.find({
+            receiverId: userId,
+            isScheduled: true,
+            sent: false
+        }).populate("senderId", "fullName username profilePic").sort("scheduledAt");
+        
+        res.json({success: true, scheduledMessages});
+    }
+    catch(error) {
+        console.log(error.message);
+        res.json({success: false, message: error.message});
     }
 }
 

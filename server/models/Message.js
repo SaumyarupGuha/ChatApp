@@ -7,6 +7,9 @@ const messageSchema = new mongoose.Schema({
     image: {type: String},
     seen: {type: Boolean, default: false},
     isRequest: {type: Boolean, default: false},
+    scheduledAt: {type: Date},
+    isScheduled: {type: Boolean, default: false},
+    sent: {type: Boolean, default: false},
 }, {timestamps: true});
 
 const Message = mongoose.model("Message", messageSchema);

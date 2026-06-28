@@ -13,6 +13,7 @@ export const ChatProvider = ({ children })=>{
     const [blockedUsers, setBlockedUsers] = useState([]);
     const [blockedByUsers, setBlockedByUsers] = useState([]);
     const [pendingRequests, setPendingRequests] = useState({});
+    const [scheduledMessages, setScheduledMessages] = useState([]);
 
     const {socket, axios, authUser} = useContext(AuthContext);
 
@@ -28,6 +29,17 @@ export const ChatProvider = ({ children })=>{
             }
         } catch(error) {
             toast.error(error.message)
+        }
+    }
+
+    const getScheduledMessages = async ()=>{
+        try {
+            const { data } = await axios.get("/api/messages/scheduled");
+            if(data.success) {
+                setScheduledMessages(data.scheduledMessages);
+            }
+        } catch(error) {
+            console.log("Error fetching scheduled messages:", error);
         }
     }
 
@@ -140,13 +152,15 @@ export const ChatProvider = ({ children })=>{
 
     useEffect(()=>{
         subscribeToMessages();
+        getScheduledMessages();
         return ()=> unsubscribeFromMessages();
     },[socket, selectedUser])
 
     const value = {
         messages, users, selectedUser, getUsers, getMessages, sendMessage,
         setSelectedUser, unseenMessages, setUnseenMessages,
-        blockedUsers, blockedByUsers, pendingRequests, acceptRequest, blockUser, unblockUser
+        blockedUsers, blockedByUsers, pendingRequests, acceptRequest, blockUser, unblockUser,
+        scheduledMessages, getScheduledMessages
     }
 
     return (
