@@ -1,5 +1,7 @@
 # Chat Application
 
+**Live Demo:** https://chat-app-kappa-two-34.vercel.app
+
 A real-time full-stack chat application built with the MERN stack, Socket.io, and Google Gemini AI.
 
 ## Tech Stack
@@ -199,7 +201,7 @@ Server runs on `http://localhost:5000`
 
 ## Deployment
 
-The app is configured for deployment on **Vercel** (client) and any Node.js host (server).
-
-- `client/vercel.json` handles SPA routing redirects
-- Server uses `node server.js` as the start command
+- **Client** deployed on [Vercel](https://vercel.com) — `client/vercel.json` handles SPA routing redirects
+- **Server** deployed on [Render](https://render.com) — start command is `node server.js`
+- Set `VITE_BACKEND_URL` in Vercel environment variables to your Render server URL
+- Set all server environment variables in Render's dashboard

@@ -26,9 +26,8 @@ const server = http.createServer(app)
 //   }
 // });
 
-export const io = new Server( server, {    // Passes server into the Server constructor so that Socket.IO can attach itself to the same HTTP server,
-                                          // allowing both HTTP (REST APIs) and WebSocket (real-time) to use the same port.
-    cors: {origin: "*"}
+export const io = new Server(server, {
+    cors: { origin: "https://chat-app-kappa-two-34.vercel.app", credentials: true }
 })
 
 // Store online users
@@ -54,7 +53,7 @@ io.on("connection", (socket)=>{
 
 // Middleware setup
 app.use(express.json({limit: "4mb"}));
-app.use(cors());
+app.use(cors({ origin: "https://chat-app-kappa-two-34.vercel.app", credentials: true }));
 
 // Send scheduled messages every 10 seconds
 setInterval(() => {
