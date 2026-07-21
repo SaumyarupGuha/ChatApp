@@ -5,13 +5,19 @@ import { AuthContext } from '../../context/AuthContext';
 
 const ProfilePage = () => {
 
-  const { authUser, updateProfile } = useContext(AuthContext)
+  const { authUser, updateProfile, axios } = useContext(AuthContext)
 
   const [selectedImg, setSelectedImg] = useState(null)
   const navigate = useNavigate();
   const [name, setName] = useState(authUser.fullName)
   const [username, setUsername] = useState(authUser.username || "")
   const [bio, setBio] = useState(authUser.bio)
+  const [autoReply, setAutoReply] = useState(authUser.autoReply || false)
+
+  const handleToggleAutoReply = async () => {
+    const { data } = await axios.put("/api/auth/toggle-auto-reply");
+    if (data.success) setAutoReply(data.autoReply);
+  }
 
   const handleSubmit = async (e)=>{
     e.preventDefault();
@@ -66,6 +72,22 @@ const ProfilePage = () => {
           
           <button type='submit' className='bg-gradient-to-r from-purple-400
            to-violet-600 text-white p-2 rounded-full text-lg cursor-pointer'>Save</button>
+
+          {/* Auto-reply toggle */}
+          <div className='flex items-center justify-between border border-gray-600 rounded-lg p-3'>
+            <div>
+              <p className='text-sm text-white'>🤖 AI Auto-Reply</p>
+              <p className='text-xs text-gray-400'>Gemini replies when you're offline (2 min delay)</p>
+            </div>
+            <button type='button' onClick={handleToggleAutoReply}
+            className={`w-12 h-6 rounded-full transition-colors cursor-pointer ${
+              autoReply ? 'bg-violet-500' : 'bg-gray-600'
+            }`}>
+              <div className={`w-5 h-5 bg-white rounded-full transition-transform mx-0.5 ${
+                autoReply ? 'translate-x-6' : 'translate-x-0'
+              }`}/>
+            </button>
+          </div>
         </form>
         <img className={`max-w-44 aspect-square rounded-full mx-10 max-sm:mt-10 ${selectedImg && 
               'rounded-full'}`}

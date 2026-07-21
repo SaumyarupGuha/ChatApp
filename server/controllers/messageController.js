@@ -2,6 +2,7 @@ import cloudinary from "../lib/cloudinary.js";
 import Message from "../models/Message.js";
 import User from "../models/User.js";
 import { io, userSocketMap } from "../server.js";
+import { geminiModel } from "../lib/gemini.js";
 
 // Get only users that the logged in user has chatted with
 export const getUsersForSidebar = async(req, res)=>{
@@ -165,6 +166,11 @@ export const sendMessage = async (req, res) =>{
             io.to(receiverSocketId).emit("newMessage", newMessage)
         }
 
+        // Trigger auto-reply if receiver is offline and has autoReply enabled
+        if (!receiverSocketId) {
+            triggerAutoReply(senderId, receiverId);
+        }
+
         res.json({success: true, newMessage})
     }
     catch(error){
@@ -172,6 +178,54 @@ export const sendMessage = async (req, res) =>{
         res.json({success: false, message: error.message})
     }
 }
+
+// Auto-reply using Gemini after 2 minutes if receiver is still offline
+const triggerAutoReply = (senderId, receiverId) => {
+    setTimeout(async () => {
+        try {
+            // Check if receiver is still offline
+            if (userSocketMap[receiverId.toString()]) return;
+
+            const receiver = await User.findById(receiverId).select("autoReply fullName");
+            if (!receiver || !receiver.autoReply) return;
+
+            // Get last 10 messages for context
+            const recentMessages = await Message.find({
+                $or: [
+                    { senderId, receiverId },
+                    { senderId: receiverId, receiverId: senderId }
+                ]
+            }).sort("-createdAt").limit(10);
+
+            const conversationText = recentMessages.reverse().map(msg => {
+                const role = msg.senderId.toString() === receiverId.toString() ? "You" : "Them";
+                return `${role}: ${msg.text || "[image]"}`;
+            }).join("\n");
+
+            const prompt = `You are ${receiver.fullName}. You are currently unavailable. Based on this conversation, write a short, natural auto-reply to let the other person know you'll get back to them. Keep it brief and conversational.\n\n${conversationText}\n\nAuto-reply:`;
+
+            const result = await geminiModel.generateContent(prompt);
+            const replyText = result.response.text().trim();
+
+            const autoMsg = await Message.create({
+                senderId: receiverId,
+                receiverId: senderId,
+                text: replyText,
+                isAutoReply: true
+            });
+
+            // Emit to sender
+            const senderSocketId = userSocketMap[senderId.toString()];
+            if (senderSocketId) {
+                io.to(senderSocketId).emit("newMessage", autoMsg);
+            }
+
+            console.log(`Auto-reply sent from ${receiver.fullName}`);
+        } catch (error) {
+            console.log("Auto-reply error:", error.message);
+        }
+    }, 2 * 60 * 1000); // 2 minutes
+};
 
 // Schedule a message
 export const scheduleMessage = async (req, res) =>{

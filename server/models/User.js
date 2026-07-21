@@ -11,6 +11,7 @@ const userSchema = new mongoose.Schema({
     pendingRequests: [{type: mongoose.Schema.Types.ObjectId, ref: "User"}],
     sentRequests: [{type: mongoose.Schema.Types.ObjectId, ref: "User"}],
     blockedUsers: [{type: mongoose.Schema.Types.ObjectId, ref: "User"}],
+    autoReply: {type: Boolean, default: false},
 }, {timestamps: true});
 
 const User = mongoose.model("User", userSchema);

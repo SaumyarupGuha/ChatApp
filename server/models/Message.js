@@ -10,6 +10,7 @@ const messageSchema = new mongoose.Schema({
     scheduledAt: {type: Date},
     isScheduled: {type: Boolean, default: false},
     sent: {type: Boolean, default: false},
+    isAutoReply: {type: Boolean, default: false},
 }, {timestamps: true});
 
 const Message = mongoose.model("Message", messageSchema);

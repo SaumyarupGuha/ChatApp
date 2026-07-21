@@ -281,6 +281,12 @@ const handleSendNow = () => {
                     <br />
                   </>
                 ) : null}
+                {msg.isAutoReply ? (
+                  <>
+                    <span className="text-xs text-blue-300">🤖 Auto-reply</span>
+                    <br />
+                  </>
+                ) : null}
                 {msg.text}
               </p>
             )}

@@ -54,7 +54,7 @@ const Sidebar = () => {
         text-white ${selectedUser ? "max-md:hidden": ''}`}>
             <div className='pb-5'>
                 <div className='flex justify-between items-center'>
-                    <img src={assets.logo} alt="logo" className='max-w-40'/>
+                    <img src={assets.logo} alt="logo" className='max-w-15'/>
                     <div className='relative py-2 group'>
                         <img src={assets.menu_icon} alt="Menu" className='max-h-5 cursor-pointer'/>
                         <div className='absolute top-full right-0 z-20 w-32 p-5 rounded-md 
